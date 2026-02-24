@@ -95,7 +95,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Default endpoint - show hello message with visitor count
-  const visitorData = await getVisitorCount();
+  const visitorData = await incrementVisitorCount();
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
     message: 'Hello from cereal.box!',
