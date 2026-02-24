@@ -33,14 +33,11 @@ async function initDatabase() {
     `);
     console.log('Visitors table ready');
 
-    // Initialize or update visitor count
+    // Initialize counter row if it doesn't exist
     const result = await pgClient.query('SELECT COUNT(*) as count FROM visitors');
     if (result.rows[0].count === '0') {
-      await pgClient.query('INSERT INTO visitors (count) VALUES (1)');
-      console.log('Initialized visitor count to 1');
-    } else {
-      await pgClient.query('UPDATE visitors SET count = count + 1, last_visit = CURRENT_TIMESTAMP WHERE id = 1');
-      console.log('Incremented visitor count');
+      await pgClient.query('INSERT INTO visitors (count) VALUES (0)');
+      console.log('Initialized visitor counter');
     }
 
     dbConnected = true;
@@ -52,17 +49,19 @@ async function initDatabase() {
   }
 }
 
-// Get visitor count from database
-async function getVisitorCount() {
+// Increment and return visitor count
+async function incrementVisitorCount() {
   if (!dbConnected || !pgClient) {
     return null;
   }
 
   try {
-    const result = await pgClient.query('SELECT count, last_visit FROM visitors WHERE id = 1');
+    const result = await pgClient.query(
+      'UPDATE visitors SET count = count + 1, last_visit = CURRENT_TIMESTAMP WHERE id = 1 RETURNING count, last_visit'
+    );
     return result.rows[0];
   } catch (error) {
-    console.error('Error fetching visitor count:', error.message);
+    console.error('Error updating visitor count:', error.message);
     return null;
   }
 }
@@ -81,7 +80,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/db') {
-    const visitorData = await getVisitorCount();
+    const visitorData = await incrementVisitorCount();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       database: {
